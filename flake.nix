@@ -22,7 +22,7 @@
           shellHook = ''
             echo "Esgaliant Analysis Shell Activated"
 
-           ''
+           '';
         };
       }
     );
