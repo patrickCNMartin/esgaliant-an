@@ -20,29 +20,9 @@
           ];
 
           shellHook = ''
-            echo "Activating or creating Python .venv with uv..."
+            echo "Esgaliant Analysis Shell Activated"
 
-            if [ ! -d .venv ]; then
-              echo "Creating virtual environment using uv..."
-              uv venv
-              echo "Created .venv with uv"
-            fi
-
-            source .venv/bin/activate
-
-            if ! grep -q ".venv/" .gitignore 2>/dev/null; then
-              echo ".venv/" >> .gitignore
-              echo "Added .venv/ to .gitignore"
-            fi
-
-            if [ ! -f pyproject.toml ]; then
-              echo "No pyproject.toml found. Initializing with uv..."
-              uv init ./
-            else
-              echo "Found pyproject.toml. Installing dependencies with uv..."
-              uv sync
-            fi
-          '';
+           ''
         };
       }
     );

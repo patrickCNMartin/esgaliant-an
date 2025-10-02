@@ -1,0 +1,31 @@
+Bootstrap: docker
+From: python:3.12-slim
+
+# Set working directory
+%environment
+    export HOME=/app
+    export PYTHONUNBUFFERED=1
+
+# Setup dependencies and Python packages
+%post
+    # Create app directory
+    mkdir -p /app
+    cd /app
+
+    # Copy pyproject.toml and lockfile from build context
+    cp /singularity/pyproject.toml /app/
+    cp /singularity/poetry.lock* /app/ 2>/dev/null || true
+
+    # Install system dependencies
+    apt-get update && \
+    apt-get install -y --no-install-recommends build-essential git && \
+    rm -rf /var/lib/apt/lists/*
+
+    # Install uv and Python dependencies
+    pip install --no-cache-dir uv
+    uv install
+
+# Set working directory when container runs
+%runscript
+    cd /app
+    exec "$@"
