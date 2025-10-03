@@ -1,2 +1,0 @@
-task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
-1	8c/0e1742	10447	checkAndBuildContainers:buildContainers (1)	COMPLETED	0	2025-10-03 12:07:46.344	2m 4s	2m 4s	-	-	-	-	-
