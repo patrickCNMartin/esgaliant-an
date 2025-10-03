@@ -23,7 +23,7 @@ From: python:3.12-slim
 
     # Install uv and Python dependencies
     pip install --no-cache-dir uv
-    uv install
+    uv sync
 
 # Set working directory when container runs
 %runscript
