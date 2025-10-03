@@ -1,5 +1,5 @@
 [project]
-name = "Esgaliant Analysis"
+name = "Esgaliant-Analysis"
 version = "0.1.0"
 description = "Requirement for all analysis related to the Esgaliant package"
 readme = "README.md"

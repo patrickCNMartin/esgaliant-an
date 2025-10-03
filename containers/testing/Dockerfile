@@ -12,4 +12,4 @@ RUN apt-get update && \
 
 # Install uv and Python dependencies
 RUN pip install --no-cache-dir uv
-RUN uv install
+RUN uv sync
