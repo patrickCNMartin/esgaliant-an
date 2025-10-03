@@ -41,11 +41,12 @@ process buildContainers {
         imagePath="${cacheDir}/${name}.sif"
         
         if [ ! -f "\${imagePath}" ]; then
-            echo "Building Singularity image for ${name}..."
-            singularity build \${imagePath} ${containerDir}/Singularity.def
-            echo "Built Singularity image for ${name}"
+            echo "Building apptainer image for ${name}..."
+            module load apptainer
+            apptainer build --fakeroot \${imagePath} ${containerDir}/${containerDir}.def
+            echo "Built aptainer image for ${name}"
         else
-            echo "Singularity image for ${name} already exists"
+            echo "Apptainer image for ${name} already exists"
         fi
         ln -s \${imagePath} ${name}.sif
     fi
