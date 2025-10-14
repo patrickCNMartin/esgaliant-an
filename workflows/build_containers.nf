@@ -9,7 +9,6 @@ workflow checkAndBuildContainers {
     
     buildContainers(container_dirs)
 }
-
 process buildContainers {
     
     input:
@@ -30,7 +29,9 @@ process buildContainers {
         
         if [ ! -f "\${imagePath}" ]; then
             echo "Building Docker image for ${name}..."
-            docker build -t ${name}:latest -f ${containerDir}/Dockerfile ${containerDir}
+            # Change to containerDir so Docker can find pyproject.toml in build context
+            cd ${containerDir}
+            docker build -t ${name}:latest -f Dockerfile .
             docker save ${name}:latest -o \${imagePath}
             echo "Built Docker image for ${name}"
         else
@@ -43,8 +44,10 @@ process buildContainers {
         if [ ! -f "\${imagePath}" ]; then
             echo "Building apptainer image for ${name}..."
             module load apptainer
-            apptainer build --fakeroot \${imagePath} ${containerDir}/${containerDir}.def
-            echo "Built aptainer image for ${name}"
+            # Change to containerDir so apptainer can find pyproject.toml
+            cd ${containerDir}
+            apptainer build --fakeroot \${imagePath} ${name}.def
+            echo "Built apptainer image for ${name}"
         else
             echo "Apptainer image for ${name} already exists"
         fi
