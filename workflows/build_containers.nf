@@ -8,6 +8,9 @@ workflow checkAndBuildContainers {
         .set { container_dirs }
     
     buildContainers(container_dirs)
+    
+    emit:
+    containers = buildContainers.out
 }
 process buildContainers {
     

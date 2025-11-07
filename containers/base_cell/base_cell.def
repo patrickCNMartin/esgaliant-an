@@ -1,0 +1,33 @@
+Bootstrap: docker
+From: python:3.12-slim
+
+# Copy files from host to container
+%files
+    pyproject.toml /app/pyproject.toml
+    bin/ /app/bin/
+
+# Set working directory
+%environment
+    export HOME=/app
+    export PYTHONUNBUFFERED=1
+
+# Setup dependencies and Python packages
+%post
+    # Create app directory (if needed)
+    mkdir -p /app
+    cd /app
+
+    # Install system dependencies
+    apt-get update && \
+    apt-get install -y --no-install-recommends build-essential git && \
+    rm -rf /var/lib/apt/lists/*
+
+    # Install uv and Python dependencies
+    pip install uv
+    uv sync
+
+# Set working directory when container runs
+%runscript
+    cd /app
+    exec "$@"
+
