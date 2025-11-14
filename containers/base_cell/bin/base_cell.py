@@ -68,8 +68,12 @@ def get_gene_set(
     organism: str = "mus_musculus",
 ):
     if atlas == "cellxgene":
-        with cellxgene_census.open_soma() as census:
-            genes = set(census["census_data"][organism].ms["RNA"].var.index)
+        with cellxgene_census.open_soma(census_version="2025-01-30") as census:
+            gene_metadata = cellxgene_census.get_var(
+                census, 
+                organism,
+                column_names=["feature_name", "feature_id"])
+            genes = set(gene_metadata['feature_name'].tolist())
         return genes
     else:
         raise ValueError(f"Unknown atlas: {atlas}")
@@ -98,7 +102,7 @@ def base_cellxgene(
         Mean expression values for the gene set across selected cells.
     """
     # connect to cellxgene server
-    with cellxgene_census.open_soma() as census:
+    with cellxgene_census.open_soma(census_version="2025-01-30") as census:
         org = census["census_data"][organism]
 
         # Build obs_query with primary data filter
@@ -106,7 +110,7 @@ def base_cellxgene(
 
         # Add cell type filter if provided
         if cell_types is not None:
-            cell_type_filter = " && ".join(
+            cell_type_filter = " and ".join(
                 [f'cell_type=="{ct}"' for ct in cell_types]
             )
             obs_filter = f"({obs_filter}) && ({cell_type_filter})"
@@ -116,7 +120,7 @@ def base_cellxgene(
             measurement_name="RNA",
             obs_query=soma.AxisQuery(value_filter=obs_filter),
             var_query=soma.AxisQuery(
-                value_filter=" || ".join(
+                value_filter=" or ".join(
                     [f'feature_name=="{gene}"' for gene in gene_set]
                 )
             ),
@@ -218,7 +222,7 @@ def cell_type_base(
         print(f"Found {gene_set_size} genes in zarr store")
         
         # Get unique cell types from cellxgene
-        with cellxgene_census.open_soma() as census:
+        with cellxgene_census.open_soma(census_version="2025-01-30") as census:
             cell_meta_data = cellxgene_census.get_obs(
                 census, organism, column_names=["cell_type"]
             )
@@ -813,7 +817,7 @@ if __name__ == "__main__":
         
         # Get cell types for initialization
         import cellxgene_census
-        with cellxgene_census.open_soma() as census:
+        with cellxgene_census.open_soma(census_version="2025-01-30") as census:
             cell_meta_data = cellxgene_census.get_obs(
                 census, args.organism, column_names=["cell_type"]
             )
