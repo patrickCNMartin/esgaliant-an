@@ -51,14 +51,14 @@ def compute_chunk_size(
 
 
 def base_cell(
+    gene_set,
+    cell_types,
     atlas: str = "cellxgene",
-    organism: str = "mus_musculus",
-    cell_types: None | list[str] = None,
+    organism: str = "mus_musculus",    
 ):
     if atlas == "cellxgene":
-        gene_set = get_gene_set(atlas, organism)
-        base_cell = base_cellxgene(gene_set, organism, cell_types)
-        return gene_set, base_cell
+        base_cell = base_cellxgene(gene_set, cell_types, organism)
+        return base_cell
     else:
         raise ValueError(f"Unknown atlas: {atlas}")
 
@@ -73,16 +73,30 @@ def get_gene_set(
                 census, 
                 organism,
                 column_names=["feature_name", "feature_id"])
-            genes = set(gene_metadata['feature_name'].tolist())
+            genes = gene_metadata['feature_name'].tolist()
         return genes
+    else:
+        raise ValueError(f"Unknown atlas: {atlas}")
+    
+def get_cell_types(
+    atlas: str = "cellxgene",
+    organism: str = "mus_musculus",
+):
+    if atlas == "cellxgene":
+        with cellxgene_census.open_soma(census_version="2025-01-30") as census:
+            cell_meta_data = cellxgene_census.get_obs(
+                census, organism, column_names=["cell_type"]
+            )
+            cell_types = sorted(list(set(cell_meta_data["cell_type"])))
+            return cell_types
     else:
         raise ValueError(f"Unknown atlas: {atlas}")
 
 
 def base_cellxgene(
-    gene_set: list[str],
+    gene_set,
+    cell_types,
     organism: str = "mus_musculus",
-    cell_types: list[str] | None = None,
 ) -> npt.NDArray[np.float64]:
     """
     Compute mean expression for a gene set, optionally filtered by cell types.
@@ -113,7 +127,7 @@ def base_cellxgene(
             cell_type_filter = " and ".join(
                 [f'cell_type=="{ct}"' for ct in cell_types]
             )
-            obs_filter = f"({obs_filter}) && ({cell_type_filter})"
+            obs_filter = f"({obs_filter}) and ({cell_type_filter})"
 
         # Always filter primary tissue to remove duplicate cells
         with org.axis_query(
@@ -744,11 +758,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Cell type base expression and difference computation"
     )
-    parser.add_argument(
-        "command",
-        choices=["init", "cell_type_base", "cell_diff", "plot"],
-        help="Command to execute"
-    )
+    
     parser.add_argument(
         "--zarr-store",
         type=str,
@@ -791,11 +801,6 @@ if __name__ == "__main__":
         help="Distance metrics to compute (for cell_diff). If not specified, computes all available."
     )
     parser.add_argument(
-        "--output",
-        type=str,
-        help="Output path for plot (for plot command)"
-    )
-    parser.add_argument(
         "--max-genes",
         type=int,
         help="Maximum number of genes to display in heatmap (for plot command)"
@@ -808,62 +813,52 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    if args.command == "init":
-        print("Initializing base cell store...")
-        gene_set, base_cell_mean = base_cell(
-            atlas=args.atlas,
-            organism=args.organism,
-        )
+    gene_set = get_gene_set(atlas = args.atlas,organism = args.organism)
+    cell_types = get_cell_types(atlas = args.atlas,organism = args.organism)
+    
+    gean_mean = base_cell(gene_set,cell_types,atlas = args.atlas,organism = args.organism)
         
-        # Get cell types for initialization
-        import cellxgene_census
-        with cellxgene_census.open_soma(census_version="2025-01-30") as census:
-            cell_meta_data = cellxgene_census.get_obs(
-                census, args.organism, column_names=["cell_type"]
-            )
-            cell_types = sorted(list(set(cell_meta_data["cell_type"])))
-        
-        root, zarr_path = initialize_base_cell_store(
-            gene_set=list(gene_set),
+    root, zarr_path = initialize_base_cell_store(
+            gene_set=gene_set,
             cell_set=cell_types,
-            gene_mean=base_cell_mean,
+            gene_mean=gean_mean,
             atlas=args.atlas,
             zarr_path=args.zarr_store,
             max_chunk_size=args.max_chunk_size,
             min_chunk_size=args.min_chunk_size,
-        )
-        print(f"Base cell store initialized at: {zarr_path}")
+    )
+    print(f"Base cell store initialized at: {zarr_path}")
     
-    elif args.command == "cell_type_base":
-        print("Computing cell type base expressions...")
-        cell_type_base(
-            zarr_store=args.zarr_store,
-            atlas=args.atlas,
-            organism=args.organism,
-            keep_all=args.keep_all,
-            max_chunk_size=args.max_chunk_size,
-            min_chunk_size=args.min_chunk_size,
-        )
-        print("Cell type base expressions computed.")
     
-    elif args.command == "cell_diff":
-        print("Computing cell differences and distances...")
-        cell_diff(
-            zarr_store=args.zarr_store,
-            atlas=args.atlas,
-            distance_metrics=args.distance_metrics,
-            max_chunk_size=args.max_chunk_size,
-            min_chunk_size=args.min_chunk_size,
-        )
-        print("Cell differences and distances computed.")
+    print("Computing cell type base expressions...")
+    cell_type_base(
+        zarr_store=args.zarr_store,
+        atlas=args.atlas,
+        organism=args.organism,
+        keep_all=args.keep_all,
+        max_chunk_size=args.max_chunk_size,
+        min_chunk_size=args.min_chunk_size,
+    )
+    print("Cell type base expressions computed.")
     
-    elif args.command == "plot":
-        print("Generating heatmap...")
-        plot_heatmap(
-            zarr_store=args.zarr_store,
-            atlas=args.atlas,
-            output_path=args.output,
-            max_genes=args.max_genes,
-            max_cell_types=args.max_cell_types,
-        )
-        print("Heatmap generated.")
+    
+    print("Computing cell differences and distances...")
+    cell_diff(
+        zarr_store=args.zarr_store,
+        atlas=args.atlas,
+        distance_metrics=args.distance_metrics,
+        max_chunk_size=args.max_chunk_size,
+        min_chunk_size=args.min_chunk_size,
+    )
+    print("Cell differences and distances computed.")
+    
+    
+    print("Generating heatmap...")
+    plot_heatmap(
+        zarr_store=args.zarr_store,
+        atlas=args.atlas,
+        output_path=args.output,
+        max_genes=args.max_genes,
+        max_cell_types=args.max_cell_types,
+    )
+    print("Heatmap generated.")
